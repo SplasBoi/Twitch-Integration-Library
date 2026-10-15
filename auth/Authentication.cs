@@ -154,6 +154,7 @@ static class Authentication
         }
 
         DateTime startedPollingAt = DateTime.UtcNow;
+        int pollingRateSeconds = deviceCodeResponse.interval;
 
         while (true)
         {
@@ -204,12 +205,17 @@ static class Authentication
             switch (tokenFailed.message)
             {
                 case "authorization_pending":
-                    await Task.Delay(deviceCodeResponse.interval, cancellationToken);
+                    break;
+                
+                case "slow_down":
+                    pollingRateSeconds = checked(pollingRateSeconds + 1);
                     break;
 
                 default:
                     throw new InvalidOperationException($"Device Flow polling failed: {(int)pollingResponse.StatusCode} {pollingResponse.ReasonPhrase}. Response: {content}");
             }
+
+            await Task.Delay(pollingRateSeconds * 1000, cancellationToken);
         }
     }
 
